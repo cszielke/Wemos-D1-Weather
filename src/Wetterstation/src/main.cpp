@@ -15,8 +15,8 @@
 
 #include <Wire.h>
 
-#define CLEAR_CONFIG false
-#define roottopic "GarageHA"
+#define CLEAR_CONFIG true
+#define roottopic "Wetterstation"
 #define FWVERSION "V1.0.0"
 
 bool shouldSaveConfig  = false;
