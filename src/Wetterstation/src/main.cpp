@@ -15,7 +15,9 @@
 
 #include <Wire.h>
 
-#define CLEAR_CONFIG true
+#include "weather.h"
+
+#define CLEAR_CONFIG false
 #define roottopic "Wetterstation"
 #define FWVERSION "V1.0.0"
 
@@ -46,28 +48,21 @@ char mqtt_user[40] = "user";
 char mqtt_pass[40] = "password";
 
 char mqtt_root_topic[34] = roottopic;
-char mqtt_SwDoor_topic[44];
-char mqtt_SW_Reserved_topic[44];
-char mqtt_REL_Door_topic[44];
-char mqtt_distance_topic[44];
-char mqtt_WIFI_RSSI_topic[44];
-char mqtt_SUB_REL_Door_topic[44];
+char mqtt_wifirssi_topic[44];
+char mqtt_battery_topic[44];
 
-int val_swdoor = LOW;
-int val_swreserved = LOW;
-int val_rel_open_door = LOW;
-int val_distance = 0;
-int distliter = 0;
+char mqtt_sub_cmd_topic[44];
 
-int last_val_swdoor = HIGH +1; //Force sending initial status 
-int last_val_swreserved = HIGH +1; //Force sending initial status 
-int last_val_rel_door = HIGH +1; //Force sending initial status 
-int last_val_level = -1;  //Force sending initial status 
+float mqtt_wifirssi;
+float mqtt_battery;
 
-int last_val_distance = -1;
+float last_val_wifirssi;
+float last_val_battery;
 
 int counter = 0; //Update MQTT from time to time...
 #define MaxSendInterval 30
+
+Weather weather;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -95,17 +90,9 @@ void SubCallback(char* topic, byte* message, unsigned int length) {
 
   // If a message is received on the topic esp32/output, you check if the message is either "on" or "off". 
   // Changes the output state according to the message
-  if (String(topic) == mqtt_SUB_REL_Door_topic) { //"GarageHA/14087507/reldoorout"){ 
-    Serial.print("Changing output to ");
-    if((messageTemp == "HIGH") || (messageTemp == "1")){
-      Serial.println("Rel HIGH");
-      digitalWrite(REL_OPEN_DOOR, HIGH);
-    }
-    else if((messageTemp == "LOW") || (messageTemp == "0")){
-      Serial.println("Rel LOW");
-      digitalWrite(REL_OPEN_DOOR, LOW);
-    }
-    delay(500);
+  if (String(topic) == mqtt_sub_cmd_topic) { //"Wetterstation/14506/202/cmd"){ 
+    Serial.print("Command received: ");
+    Serial.println("messageTemp");
   }
 }
 
@@ -130,14 +117,13 @@ void setup() {
   strcat(mqtt_root_topic, "/");
   strcat(mqtt_root_topic,  String(CHIP_ID).c_str());
 
-  snprintf(mqtt_SwDoor_topic,sizeof(mqtt_SwDoor_topic),"%s/%s",mqtt_root_topic,"swdoor");
-  snprintf(mqtt_SW_Reserved_topic,sizeof(mqtt_SW_Reserved_topic),"%s/%s",mqtt_root_topic, "swreserved");
-  snprintf(mqtt_REL_Door_topic,sizeof(mqtt_REL_Door_topic),"%s/%s",mqtt_root_topic, "reldoor");
-  snprintf(mqtt_distance_topic,sizeof(mqtt_distance_topic),"%s/%s",mqtt_root_topic, "dist");
-  snprintf(mqtt_WIFI_RSSI_topic,sizeof(mqtt_WIFI_RSSI_topic),"%s/%s",mqtt_root_topic, "wifirssi");
-  snprintf(mqtt_SUB_REL_Door_topic,sizeof(mqtt_REL_Door_topic),"%s/%s",mqtt_root_topic, "reldoorout");
+  snprintf(mqtt_wifirssi_topic,sizeof(mqtt_wifirssi_topic),"%s/%s",mqtt_root_topic, "wifirssi");
+  snprintf(mqtt_battery_topic,sizeof(mqtt_battery_topic),"%s/%s",mqtt_root_topic, "battery");
+  
+  snprintf(mqtt_sub_cmd_topic,sizeof(mqtt_sub_cmd_topic),"%s/%s",mqtt_root_topic, "cmd");
+  
   Serial.print("Subscribing to Topic:");
-  Serial.println(mqtt_SUB_REL_Door_topic);
+  Serial.println(mqtt_sub_cmd_topic);
   
   //clean FS, for testing
   if(CLEAR_CONFIG) LittleFS.format();
@@ -277,15 +263,17 @@ void setup() {
 
     // start the OTEthernet library with internal (flash) based storage
   ArduinoOTA.begin();
+
+  weather.Init(client,Serial,mqtt_root_topic);
 }
 
 void reconnect() {
   while (!client.connected()) {
     Serial.println("trying to connect to mqtt...");
-    if (client.connect("ESP8266Client_GHA")) {
+    if (client.connect("ESP8266Client_WS")) {
       Serial.println("connected");
 
-      client.subscribe(mqtt_SUB_REL_Door_topic);
+      client.subscribe(mqtt_sub_cmd_topic);
 
     } else {
       Serial.print("connecting to mqtt broker failed, rc: ");
@@ -299,12 +287,24 @@ int32_t publish_WifiRssi(void)
 {
   int32_t sig = WiFi.RSSI();
   snprintf(tmp,sizeof(tmp),"%d",sig);
-  client.publish(mqtt_WIFI_RSSI_topic, tmp);
+  client.publish(mqtt_wifirssi_topic, tmp);
 
-  Serial.println("Signal strength");
+  Serial.print("Signal strength: ");
   Serial.println(WiFi.RSSI());
 
   return sig;
+}
+
+float publish_Battery(void)
+{
+  float batlevel = 3.2F;
+  snprintf(tmp,sizeof(tmp),"%3.2f",batlevel);
+  client.publish(mqtt_battery_topic, tmp);
+
+  Serial.print("Battery level: ");
+  Serial.println(tmp);
+
+  return batlevel;
 }
 
 void loop() {  
@@ -314,90 +314,23 @@ void loop() {
   client.loop();
 
   //Read Inputs
-  val_swdoor = digitalRead(SW_DOOR);;
-  val_swreserved = digitalRead(SW_RESERVED);;
-  
-  // Clears the trigPin
-  digitalWrite(TRIGGER, LOW);
-  delayMicroseconds(2);
-
-  // Sets the trigPin on HIGH state for 10 micro seconds
-  digitalWrite(TRIGGER, HIGH);
-  delayMicroseconds(100);
-  digitalWrite(TRIGGER, LOW);
-
-  // Reads the echoPin, returns the sound wave travel time in microseconds
-  duration = pulseIn(ECHO, HIGH);
-
-  // Calculating the distance
-  distance= duration*0.034/2;
-
-  val_distance = distance;
-  
-  //Limits in cm
-  float distmax = 20.0; //full
-  float distmin = 113.0; //empty
-
-  distliter = (val_distance - distmin) * 1000 / (distmax - distmin);
-  
-  if(distliter < 0) distliter = 0;
-  if(distliter > 1000) distliter = 1000;
+  weather.GetValues();
 
   //Send Values
-  Serial.print("val_swdoor: ");
-  Serial.println(val_swdoor);
-  if((val_swdoor != last_val_swdoor) || (counter >= MaxSendInterval)){
-    if(val_swdoor == HIGH) client.publish(mqtt_SwDoor_topic, "1");
-    else client.publish(mqtt_SwDoor_topic, "0");
-    last_val_swdoor = val_swdoor;
+  weather.PrintValues();
 
+  //If at least 1 Value was send, Publish also Bat and Rssi
+  if(weather.PublishValues(counter >= MaxSendInterval) > 0)
+  {
     publish_WifiRssi();
+    publish_Battery();
   }
-
-  if((val_swreserved != last_val_swreserved) || (counter >= MaxSendInterval)){
-    if(val_swreserved == HIGH) client.publish(mqtt_SW_Reserved_topic, "1");
-    else client.publish(mqtt_SW_Reserved_topic, "0");
-    last_val_swreserved = val_swreserved;
-
-    publish_WifiRssi();
-  }
-
-  //Switch Door_Open_Rel off if it's on
-  val_rel_open_door = digitalRead(REL_OPEN_DOOR);
-
-  if((val_rel_open_door != last_val_rel_door) || (counter >= MaxSendInterval)){
-    if(val_rel_open_door == HIGH) client.publish(mqtt_REL_Door_topic, "1");
-    else client.publish(mqtt_REL_Door_topic, "0");
-
-    last_val_rel_door = val_rel_open_door;
-
-    publish_WifiRssi();
-
-    //Switch off again, if it was HIGH
-    if(val_rel_open_door == HIGH)
-    {
-      delay(500);
-      digitalWrite(REL_OPEN_DOOR, LOW);
-      client.publish(mqtt_SUB_REL_Door_topic, "0");
-    }
-  }
-  Serial.print("Relais_Door_Open: ");Serial.println(val_rel_open_door);
-  
-
-  if((val_distance != last_val_distance) || (counter >= MaxSendInterval)){
-    snprintf(tmp,sizeof(tmp),"%d",val_distance);
-    client.publish(mqtt_distance_topic, tmp);
-
-    last_val_distance = val_distance;
-
-    publish_WifiRssi();
-  }
-  Serial.print("Distance: ");Serial.println(val_distance);
   
   counter++;
   if(counter >= (MaxSendInterval + 1)){
     counter = 0;
   }
   ArduinoOTA.handle();
+
   delay(500);
 }
