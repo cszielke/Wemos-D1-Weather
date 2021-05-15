@@ -13,8 +13,6 @@
 #include "WiFiManager.h"
 #include "PubSubClient.h"
 
-#include <Wire.h>
-
 #include "weather.h"
 
 #define CLEAR_CONFIG false
@@ -105,7 +103,6 @@ void setup() {
   
   pinMode(TRIGGER, OUTPUT); // Sets the trigPin as an Output
   pinMode(ECHO, INPUT); // Sets the echoPin as an Input
-
 
   Serial.begin(115200);
   Serial.println();
@@ -297,7 +294,8 @@ int32_t publish_WifiRssi(void)
 
 float publish_Battery(void)
 {
-  float batlevel = 3.2F;
+  int aval = analogRead(A0);
+  float batlevel = 4.39F/1024*aval;
   snprintf(tmp,sizeof(tmp),"%3.2f",batlevel);
   client.publish(mqtt_battery_topic, tmp);
 

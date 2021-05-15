@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include "weather.h"
 
+#define SEALEVELPRESSURE_HPA (1013.25)
+
 Weather::Weather()
 {
   //Nothing to do here....
@@ -12,6 +14,9 @@ void Weather::Init(PubSubClient &myclient, Stream &mydbgprn, const char mqtt_roo
   dbgprinter = &mydbgprn;
   dbgprinter->println("Weather Init:");
 
+  val_errorflags = 0;
+  last_val_errorflags = 0xFFFFFFFFlu; //force first send
+  
   snprintf(mqtt_pressure_topic,sizeof(mqtt_pressure_topic),"%s/%s",mqtt_root_topic,"preasure");
   snprintf(mqtt_humidity_in_topic,sizeof(mqtt_humidity_in_topic),"%s/%s",mqtt_root_topic, "humidity_in");
   snprintf(mqtt_humidity_out_topic,sizeof(mqtt_humidity_out_topic),"%s/%s",mqtt_root_topic, "humidity_out");
@@ -23,16 +28,44 @@ void Weather::Init(PubSubClient &myclient, Stream &mydbgprn, const char mqtt_roo
   snprintf(mqtt_rain_total_topic,sizeof(mqtt_rain_total_topic),"%s/%s",mqtt_root_topic, "rain_total");
   snprintf(mqtt_rain_1h_topic,sizeof(mqtt_rain_1h_topic),"%s/%s",mqtt_root_topic, "rain_h");
   snprintf(mqtt_rain_24h_topic,sizeof(mqtt_rain_24h_topic),"%s/%s",mqtt_root_topic, "rain_24h");
+  snprintf(mqtt_errorflags_topic,sizeof(mqtt_errorflags_topic),"%s/%s",mqtt_root_topic, "errorflags");
+
+
+  unsigned status;
+  
+  // default settings
+  status = bme.begin(0x77, &Wire);  
+  // You can also pass in a Wire library object like &Wire2
+  // status = bme.begin(0x76, &Wire2)
+  if (!status) {
+      Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
+      Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(),16);
+      Serial.print("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085\n");
+      Serial.print("   ID of 0x56-0x58 represents a BMP 280,\n");
+      Serial.print("        ID of 0x60 represents a BME 280.\n");
+      Serial.print("        ID of 0x61 represents a BME 680.\n");
+      val_errorflags |= ERROR_BME280_NOT_FOUND; //Error BME280 not found
+  }
+
+  // weather monitoring
+  Serial.println("-- Weather Station Scenario --");
+  Serial.println("forced mode, 1x temperature / 1x humidity / 1x pressure oversampling,");
+  Serial.println("filter off");
+  bme.setSampling(Adafruit_BME280::MODE_FORCED,
+                  Adafruit_BME280::SAMPLING_X1, // temperature
+                  Adafruit_BME280::SAMPLING_X1, // pressure
+                  Adafruit_BME280::SAMPLING_X1, // humidity
+                  Adafruit_BME280::FILTER_OFF   );
 
 }
 
 int Weather::GetValues()
 {
   dbgprinter->println("Weather GetValues:");
-  val_pressure = random(50)+980.0F;
-  val_humidity_in = random(100);
+  val_pressure = bme.readPressure() / 100.0F;
+  val_humidity_in = bme.readHumidity();
   val_humidity_out = random(100);
-  val_temp_in = random(100)/2.0F -20.0;
+  val_temp_in = bme.readTemperature();
   val_temp_out = random(100)/2.0F -20.0;
   val_wind = random(100)/2.0F;
   val_wind_avg = random(100)/2.0F;
@@ -58,6 +91,7 @@ int Weather::PrintValues()
   dbgprinter->print("val_rain_total:"); dbgprinter->println(val_rain_total);
   dbgprinter->print("val_rain_1h:"); dbgprinter->println(val_rain_1h);
   dbgprinter->print("val_rain_24h:"); dbgprinter->println(val_rain_24h);
+
   return 0;
 }
 
@@ -122,19 +156,25 @@ int Weather::PublishValues(bool force)
   if((val_rain_total != last_val_rain_total) || force){
     snprintf(tmp,sizeof(tmp),"%6.2f",val_rain_total);  
     client->publish(mqtt_rain_total_topic, tmp);
-    val_rain_total = val_rain_total;
+    last_val_rain_total = val_rain_total;
     cnt++;
   }
   if((val_rain_1h != last_val_rain_1h) || force){
     snprintf(tmp,sizeof(tmp),"%6.2f",val_rain_1h);  
     client->publish(mqtt_rain_1h_topic, tmp);
-    val_rain_1h = val_rain_1h;
+    last_val_rain_1h = val_rain_1h;
     cnt++;
   }
   if((val_rain_24h != last_val_rain_24h) || force){
     snprintf(tmp,sizeof(tmp),"%6.2f",val_rain_24h);  
     client->publish(mqtt_rain_24h_topic, tmp);
-    val_rain_24h = val_rain_24h;
+    last_val_rain_24h = val_rain_24h;
+    cnt++;
+  }
+  if((val_errorflags != last_val_errorflags) || force){
+    snprintf(tmp,sizeof(tmp),"%u",val_errorflags);  
+    client->publish(mqtt_errorflags_topic, tmp);
+    last_val_errorflags = val_errorflags;
     cnt++;
   }
 
