@@ -61,6 +61,8 @@ void Weather::Init(PubSubClient &myclient, Stream &mydbgprn, const char mqtt_roo
 
 int Weather::GetValues()
 {
+  bme.takeForcedMeasurement(); // has no effect in normal mode
+  
   dbgprinter->println("Weather GetValues:");
   val_pressure = bme.readPressure() / 100.0F;
   val_humidity_in = bme.readHumidity();
