@@ -294,8 +294,15 @@ int32_t publish_WifiRssi(void)
 
 float publish_Battery(void)
 {
-  int aval = analogRead(A0);
-  float batlevel = 4.39F/1024*aval;
+  float aval = analogRead(A0);
+  for(int i=0; i<5;i++)
+  {
+    aval += analogRead(A0);
+    delay(11);
+  }
+  aval = aval/6;
+
+  float batlevel = 4.25F/1024*aval;
   snprintf(tmp,sizeof(tmp),"%3.2f",batlevel);
   client.publish(mqtt_battery_topic, tmp);
 
@@ -330,5 +337,5 @@ void loop() {
   }
   ArduinoOTA.handle();
 
-  delay(500);
+  delay(1000);
 }
