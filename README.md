@@ -1,16 +1,2 @@
-# Garage_HA
-Garage home automation
-
-## Sensors:
-* Auto Präsenz/Abstand
-* Tor zu
-* Temperatur
-
-
-## Aktor:
-* Tor
-* Außenlicht
-* Kompressor
-
-## Sonstiges
-* Webcam
+# Wemos-D1-Weather
+Weatherstation with Wemos-D1-Mini and RFM69 Receiver
