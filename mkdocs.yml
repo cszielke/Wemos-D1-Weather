@@ -1,5 +1,5 @@
 site_name: Wetterstation-esp8266
-site_dir: "\\\\raspidbsrv\\web\\html\\doku\\Wetterstation"
+site_dir: "build"
 nav:
   - Home: index.md
   - NodeMCU: nodemcu.md
