@@ -13,7 +13,6 @@ theme:
     language: de
     font: false
 markdown_extensions:
-  - pymdownx.extra
   - admonition
   - pymdownx.details
   - pymdownx.arithmatex
