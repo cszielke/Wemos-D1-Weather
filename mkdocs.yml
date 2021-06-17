@@ -9,7 +9,7 @@ nav:
   - About: about.md
   - Hilfe: help.md
 theme: 
-    name: material
+    name: readthedocs
     language: de
     font: false
 markdown_extensions:
