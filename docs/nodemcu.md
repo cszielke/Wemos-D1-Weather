@@ -23,6 +23,7 @@ One important thing to notice about ESP8266 is that the GPIO number doesn’t ma
 The following table shows the correspondence between the labels on the silkscreen and the GPIO number as well as what pins are the best to use in your projects, and which ones you need to be cautious.
 
 The pins highlighted in green are OK to use. The ones highlighted in yellow are OK to use, but you need to pay attention because they may have unexpected behavior mainly at boot. The pins highlighted in red are not recommended to use as inputs or outputs.
+
 | Label | GPIO   | Input         | Output                | Notes                                                             |
 |-------|--------|---------------|-----------------------|-------------------------------------------------------------------|
 | D0    | GPIO16 | no interrupt  | no PWM or I2C support | HIGH at boot. Used to wake up from deep sleep                     |
@@ -37,6 +38,7 @@ The pins highlighted in green are OK to use. The ones highlighted in yellow are 
 | RX    | GPIO3  | OK            | RX pin                | HIGH at boot                                                      |
 | TX    | GPIO1  | TX pin        | OK                    | HIGH at boot. Debug output at boot, boot fails if pulled LOW      |
 | A0    | ADC0   | Analog Input  | X                     |                                                                   |
+
 
 Continue reading for a more detailled and in-depth analysis of the ESP8266 GPIOs and its functions.
 GPIOs connected to the Flash Chip
