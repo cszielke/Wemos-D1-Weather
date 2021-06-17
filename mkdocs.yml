@@ -14,11 +14,6 @@ theme:
     font: false
 markdown_extensions:
   - admonition
-  - pymdownx.details
-  - pymdownx.arithmatex
-  - pymdownx.tilde
-  - pymdownx.tasklist:
-      custom_checkbox: true
   - markdown.extensions.codehilite:
       guess_lang: false
       linenums: true
