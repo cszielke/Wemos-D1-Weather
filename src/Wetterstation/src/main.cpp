@@ -23,21 +23,23 @@ bool shouldSaveConfig  = false;
 const int CHIP_ID = ESP.getChipId();
 
 //Output
-const int REL_OPEN_DOOR = D5; //GPIO14
+//const int REL_OPEN_DOOR = D5; //GPIO14
 
-const int SW_DOOR = D6; // GPIO12
-const int SW_RESERVED = D7; //GPIO13
+//const int SW_DOOR = D6; // GPIO12
+//const int SW_RESERVED = D7; //GPIO13
 
 // I2C
 const int I2C_CLK = D1; //GPIO05
 const int I2C_DAT = D2; //GPIO04
 
 //Ultrasonic distance
-const int TRIGGER = D4; //GPIO02 (High on Boot, boot failture if pulled LOW)
-const int ECHO = D0; //GPIO16 (High on Boot)
+//const int TRIGGER = D4; //GPIO02 (High on Boot, boot failture if pulled LOW)
+//const int ECHO = D0; //GPIO16 (High on Boot)
 
-long duration;
-int distance;
+//long duration;
+//int distance;
+
+uint32_t lasttime;
 
 //MQTT
 char mqtt_server[40] = "192.168.15.107";
@@ -95,14 +97,14 @@ void SubCallback(char* topic, byte* message, unsigned int length) {
 }
 
 void setup() {
-  pinMode(SW_RESERVED, INPUT);
-  pinMode(SW_DOOR, INPUT);
+  //pinMode(SW_RESERVED, INPUT);
+  //pinMode(SW_DOOR, INPUT);
   
-  pinMode(REL_OPEN_DOOR, OUTPUT);
-  digitalWrite(REL_OPEN_DOOR,0);
+  //pinMode(REL_OPEN_DOOR, OUTPUT);
+  //digitalWrite(REL_OPEN_DOOR,0);
   
-  pinMode(TRIGGER, OUTPUT); // Sets the trigPin as an Output
-  pinMode(ECHO, INPUT); // Sets the echoPin as an Input
+  //pinMode(TRIGGER, OUTPUT); // Sets the trigPin as an Output
+  //pinMode(ECHO, INPUT); // Sets the echoPin as an Input
 
   Serial.begin(115200);
   Serial.println();
@@ -260,7 +262,7 @@ void setup() {
 
     // start the OTEthernet library with internal (flash) based storage
   ArduinoOTA.begin();
-
+  lasttime = millis();
   weather.Init(client,Serial,mqtt_root_topic);
 }
 
@@ -313,29 +315,36 @@ float publish_Battery(void)
 }
 
 void loop() {  
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
-
-  //Read Inputs
-  weather.GetValues();
-
-  //Send Values
-  weather.PrintValues();
-
-  //If at least 1 Value was send, Publish also Bat and Rssi
-  if(weather.PublishValues(counter >= MaxSendInterval) > 0)
-  {
-    publish_WifiRssi();
-    publish_Battery();
-  }
+  //weather.loop();
   
-  counter++;
-  if(counter >= (MaxSendInterval + 1)){
-    counter = 0;
-  }
-  ArduinoOTA.handle();
+  uint32_t now = millis();
+  if((lasttime + 1000) < now)
+  {
+    lasttime = now;
+  
+    if (!client.connected()) {
+      reconnect();
+    }
+    client.loop();
+  
+    //Read Inputs
+    weather.GetValues();
 
-  delay(1000);
+    //Send Values
+    weather.PrintValues();
+
+    //If at least 1 Value was send, Publish also Bat and Rssi
+    if(weather.PublishValues(counter >= MaxSendInterval) > 0)
+    {
+      publish_WifiRssi();
+      publish_Battery();
+    }
+    
+    counter++;
+    if(counter >= (MaxSendInterval + 1)){
+      counter = 0;
+    }
+    ArduinoOTA.handle();
+    delay(100);
+  }
 }

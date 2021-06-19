@@ -1,11 +1,12 @@
 #include <Arduino.h>
 #include "weather.h"
+#include "rfm.h"
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
 Weather::Weather()
 {
-  //Nothing to do here....
+  //rfm.Init(*dbgprinter);
 }
 
 void Weather::Init(PubSubClient &myclient, Stream &mydbgprn, const char mqtt_root_topic[])
@@ -181,4 +182,9 @@ int Weather::PublishValues(bool force)
   }
 
   return cnt;
+}
+
+void Weather::loop()
+{
+  //rfm.loop();
 }

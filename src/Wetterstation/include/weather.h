@@ -6,6 +6,7 @@
 
 #include "PubSubClient.h"
 #include "Adafruit_BME280.h"
+#include "rfm.h"
 
 
 #define ERROR_BME280_NOT_FOUND 0x00000001lu
@@ -17,6 +18,7 @@ class Weather
     int GetValues();
     int PrintValues();
     int PublishValues(bool force);
+    void loop();
 
     // values
     float val_pressure;
@@ -65,6 +67,7 @@ class Weather
     Stream* dbgprinter;
 
     Adafruit_BME280 bme;
+    RFM rfm;
 };
 
 #endif //WEATHER_H
