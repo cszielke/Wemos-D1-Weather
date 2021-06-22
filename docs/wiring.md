@@ -1,6 +1,4 @@
 # Schaltplan
-## Verdrahtung
-![Layout](img/Verdrahtung.svg)
 ## Platine
 ### Schaltplan
 ![Layout](img/platine_schaltplan.png)
