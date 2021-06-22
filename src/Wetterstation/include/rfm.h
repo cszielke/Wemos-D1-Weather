@@ -8,6 +8,8 @@
 
 #define TOL 50 // +- tolerance
 #define RFMSPI SPI
+#define RF69OOK_FSTEP 61.03515625 // == FXOSC/2^19 = 32mhz/2^19 (p13 in DS)
+
 class RFM
 {
     public:
@@ -20,6 +22,8 @@ class RFM
     void writeReg(uint8_t address, uint8_t data);
     uint8_t readReg(uint8_t address);
     bool rfm69Init();
+    void setFrequencyMHz(float f);
+    void setFrequency(uint32_t freqHz);
     
     SPISettings settings;
     

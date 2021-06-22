@@ -28,8 +28,8 @@
 // Please maintain this license information along with authorship
 // and copyright notices in any redistribution of this code
 // **********************************************************************************
-#include <RFM69OOK.h>
-#include <RFM69OOKregisters.h>
+//#include <RFM69OOK.h>
+//#include <RFM69OOKregisters.h>
 #include <SPI.h>
 
 volatile byte RFM69OOK::_mode;  // current transceiver state

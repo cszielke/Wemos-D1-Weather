@@ -315,7 +315,7 @@ float publish_Battery(void)
 }
 
 void loop() {  
-  //weather.loop();
+  weather.loop();
   
   uint32_t now = millis();
   if((lasttime + 1000) < now)

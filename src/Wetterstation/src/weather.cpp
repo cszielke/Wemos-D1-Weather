@@ -6,7 +6,6 @@
 
 Weather::Weather()
 {
-  //rfm.Init(*dbgprinter);
 }
 
 void Weather::Init(PubSubClient &myclient, Stream &mydbgprn, const char mqtt_root_topic[])
@@ -58,6 +57,8 @@ void Weather::Init(PubSubClient &myclient, Stream &mydbgprn, const char mqtt_roo
                   Adafruit_BME280::SAMPLING_X1, // humidity
                   Adafruit_BME280::FILTER_OFF   );
 
+  
+  rfm.Init(*dbgprinter);
 }
 
 int Weather::GetValues()
@@ -186,5 +187,5 @@ int Weather::PublishValues(bool force)
 
 void Weather::loop()
 {
-  //rfm.loop();
+  rfm.loop();
 }

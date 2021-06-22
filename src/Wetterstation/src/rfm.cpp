@@ -4,6 +4,9 @@
 #include "rfm.h"
 
 #define RFM_CS D0
+#define INTPIN D4
+
+// Help: https://github.com/merbanan/rtl_433
 
 RFM::RFM()
 {
@@ -15,24 +18,44 @@ void RFM::Init(Stream &mydbgprn)
   dbgprinter = &mydbgprn;
   dbgprinter->println("RFM Init:");
 
-  // radio.initialize();
-  // radio.setFrequencyMHz(433.9);
-  // radio.receiveBegin();
   pinMode(RFM_CS,OUTPUT);
+  pinMode(INTPIN,INPUT);
   settings = SPISettings(4000000, MSBFIRST, SPI_MODE0);
   RFMSPI.begin();
   dbgprinter->println(F("Init RFM69"));
+  // radio.initialize();
+  // radio.setFrequencyMHz(433.9);
+  // radio.receiveBegin();
   rfm69Init();
+  setFrequencyMHz(868.25);
+  writeReg(RFM69_REG_OPMODE, (readReg(RFM69_REG_OPMODE) & 0xE3) | RFM69_OPMODE_RECEIVER);
+
 
   dbgprinter->println(F("start"));
   t0 = micros();
 }
 
+// Set literal frequency using floating point MHz value
+void RFM::setFrequencyMHz(float f)
+{
+  setFrequency(f * 1000000);
+}
+
+// set the frequency (in Hz)
+void RFM::setFrequency(uint32_t freqHz)
+{
+  // TODO: p38 hopping sequence may need to be followed in some cases
+  freqHz /= RF69OOK_FSTEP; // divide down by FSTEP to get FRF
+  writeReg(RFM69_REG_FRFMSB, freqHz >> 16);
+  writeReg(RFM69_REG_FRFMID, freqHz >> 8);
+  writeReg(RFM69_REG_FRFLSB, freqHz);
+}
+
 void RFM::loop()
 {
-  return;
+  //return;
 
-  bool s = true; //radio.poll();
+  bool s = digitalRead(INTPIN); //radio.poll();
   uint32_t t = micros();
   uint32_t d = t - t0;
 
@@ -90,8 +113,8 @@ uint8_t RFM::sendSPI(uint8_t address, uint8_t data)
   digitalWrite(RFM_CS,LOW);
   RFMSPI.transfer(address);
   uint8_t res = RFMSPI.transfer(data);
-  digitalWrite(RFM_CS,HIGH);
   RFMSPI.endTransaction();
+  digitalWrite(RFM_CS,HIGH);
   return res;
 }
 
@@ -122,7 +145,12 @@ bool RFM::rfm69Init()
     {255, 0}
   };
 
-    for (byte i = 0; CONFIG[i][0] != 255; i++)
-      writeReg(CONFIG[i][0], CONFIG[i][1]);
+  for (byte i = 0; CONFIG[i][0] != 255; i++)
+    writeReg(CONFIG[i][0], CONFIG[i][1]);
 
+  setHighPower(_isRFM69HW); // called regardless if it's a RFM69W or RFM69HW
+
+  while ((readReg(REG_IRQFLAGS1) & RF_IRQFLAGS1_MODEREADY) == 0x00); // Wait for ModeReady
+
+  return true;
 }
