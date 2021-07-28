@@ -189,3 +189,8 @@ void Weather::loop()
 {
   rfm.loop();
 }
+
+void Weather::setFrequencyMHz(float f)
+{
+  rfm.setFrequencyMHz(f);
+}

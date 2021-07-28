@@ -19,6 +19,7 @@ class Weather
     int PrintValues();
     int PublishValues(bool force);
     void loop();
+    void setFrequencyMHz(float f);
 
     // values
     float val_pressure;

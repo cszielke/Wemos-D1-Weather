@@ -92,7 +92,12 @@ void SubCallback(char* topic, byte* message, unsigned int length) {
   // Changes the output state according to the message
   if (String(topic) == mqtt_sub_cmd_topic) { //"Wetterstation/14506/202/cmd"){ 
     Serial.print("Command received: ");
-    Serial.println("messageTemp");
+    Serial.println(messageTemp);
+    Serial.print("SetFrequency(");
+    float f = atof(messageTemp.c_str());
+    Serial.print(f);
+    Serial.println(")");
+    weather.setFrequencyMHz(f);
   }
 }
 

@@ -27,7 +27,10 @@ void RFM::Init(Stream &mydbgprn)
   // radio.setFrequencyMHz(433.9);
   // radio.receiveBegin();
   rfm69Init();
-  setFrequencyMHz(868.25);
+  // 865,0 - 865,6 	100 mW (ERP) 	listen-before-talk (LBT), kein spread spectrum, 200 kHz Raster (Kanäle 1-3) 
+  // 865,6 - 867,6 	2 W (ERP) 	LBT (außer 865,7, 866,3, 866,9, 867,5 MHz), kein spread spectrum, 200 kHz Raster (Kanäle 4-13) 
+  // 867,6 - 868,0 	500 mW (ERP) 	LBT, kein spread spectrum, 200 kHz Raster (Kanäle 14-15) 
+  setFrequencyMHz(865.4);
   writeReg(RFM69_REG_OPMODE, (readReg(RFM69_REG_OPMODE) & 0xE3) | RFM69_OPMODE_RECEIVER);
 
 
@@ -148,9 +151,9 @@ bool RFM::rfm69Init()
   for (byte i = 0; CONFIG[i][0] != 255; i++)
     writeReg(CONFIG[i][0], CONFIG[i][1]);
 
-  setHighPower(_isRFM69HW); // called regardless if it's a RFM69W or RFM69HW
+  //setHighPower(_isRFM69HW); // called regardless if it's a RFM69W or RFM69HW
 
-  while ((readReg(REG_IRQFLAGS1) & RF_IRQFLAGS1_MODEREADY) == 0x00); // Wait for ModeReady
+  //while ((readReg(REG_IRQFLAGS1) & RF_IRQFLAGS1_MODEREADY) == 0x00); // Wait for ModeReady
 
   return true;
 }
